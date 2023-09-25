@@ -1,0 +1,14 @@
+version: '2.1'
+services:
+  aio-agent:
+    container_name: aio-agent
+    image: prodaiotech/agentgo:latest
+    pull_policy: always
+    env_file:
+      - ./.aio-env
+    stdin_open: true
+    environment:
+      LISTEN_PORT: ":80"
+    stop_grace_period: 1s
+    expose:
+      - "80"
