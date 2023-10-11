@@ -2,7 +2,7 @@ version: '2.1'
 services:
   aio-agent:
     container_name: aio-agent
-    image: prodaiotech/agentgo:799a6f22
+    image: prodaiotech/agentgo:349975c6
     pull_policy: always
     env_file:
       - ./.aio-env
