@@ -20,3 +20,11 @@ services:
       - 80:80
     expose:
       - "80"
+  proxy:
+    image: prodaiotech/agent-squid:21829790
+    ports:
+      - "5145:5145"
+    environment:
+      - TZ=UTC
+    env_file:
+      - ./.aio-env
