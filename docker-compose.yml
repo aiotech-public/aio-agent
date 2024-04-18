@@ -1,14 +1,14 @@
-version: '2.1'
+#version: '2.1'
 services:
   aio-agent:
     container_name: aio-agent
     image: prodaiotech/agentgo:12d8f788
-#    deploy:
-#      restart_policy:
-#        condition: on-failure
-#        delay: 3s
-#        max_attempts: 3
-#        window: 30s
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 3s
+        max_attempts: 3
+        window: 30s
     pull_policy: always
     env_file:
       - ./.aio-env
