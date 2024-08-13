@@ -2,7 +2,7 @@
 services:
   aio-agent:
     container_name: aio-agent
-    image: prodaiotech/agentgo:368006ec
+    image: prodaiotech/agentgo:214ef980
     deploy:
       restart_policy:
         condition: on-failure
