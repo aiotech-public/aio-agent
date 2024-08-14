@@ -38,7 +38,7 @@ services:
     pid: host
     volumes:
       - '/:/host:ro,rslave'
-      - './export_keys:/export_keys'
+      - './tls-keys:/tls-keys'
     command:
       - '--path.rootfs=/host'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
@@ -50,6 +50,6 @@ services:
       - '--collector.pressure'
       - '--collector.meminfo'
       - '--collector.netdev'
-      - '--web.config.file=/export_keys/exporter_conf.yml'
+      - '--web.config.file=/tls-keys/exporter_conf.yml'
     ports:
       - 9100:9100
