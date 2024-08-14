@@ -1,30 +1,55 @@
-#version: '2.1'
 services:
   aio-agent:
     container_name: aio-agent
-    image: prodaiotech/agentgo:2af0db31
+    image: prodaiotech/agentgo:0e6176df
     deploy:
       restart_policy:
-        condition: on-failure
-        delay: 3s
-        max_attempts: 3
-        window: 30s
+        condition: unless-stopped
+        delay: 0.5s
     pull_policy: always
     env_file:
       - ./.aio-env
-    stdin_open: true
-    environment:
-      LISTEN_PORT: ":80"
-    stop_grace_period: 1s
+    # stdin_open: true
+    stop_grace_period: 0.5s
     ports:
       - 80:80
-    expose:
-      - "80"
+      - 443:443
+      - 9200:9200
+    volumes:
+      - /opt/go-cache:/go/cache
+      - /opt/go-sessions:/go/sessions
+
   proxy:
     image: prodaiotech/agent-squid:21829790
+    restart: unless-stopped
     ports:
       - "5145:5145"
     environment:
       - TZ=UTC
     env_file:
       - ./.aio-env
+    stop_grace_period: 0.5s
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    volumes:
+      - '/:/host:ro,rslave'
+      - './export_keys:/export_keys'
+    command:
+      - '--path.rootfs=/host'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--collector.disable-defaults'
+      - '--collector.cpu'
+      - '--collector.cpufreq'
+      - '--collector.diskstats'
+      - '--collector.filesystem'
+      - '--collector.pressure'
+      - '--collector.meminfo'
+      - '--collector.netdev'
+      - '--web.config.file=/export_keys/exporter_conf.yml'
+    ports:
+      - 9100:9100
