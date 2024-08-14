@@ -5,11 +5,9 @@ services:
     deploy:
       restart_policy:
         condition: unless-stopped
-        delay: 0.5s
     pull_policy: always
     env_file:
       - ./.aio-env
-    # stdin_open: true
     stop_grace_period: 0.5s
     ports:
       - 80:80
@@ -51,5 +49,3 @@ services:
       - '--collector.meminfo'
       - '--collector.netdev'
       - '--web.config.file=/tls-keys/exporter_conf.yml'
-    ports:
-      - 9100:9100
