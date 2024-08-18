@@ -1,7 +1,7 @@
 services:
   aio-agent:
     container_name: aio-agent
-    image: prodaiotech/agentgo:1894d10d
+    image: prodaiotech/agentgo:39be28f6
     deploy:
       restart_policy:
         condition: unless-stopped
