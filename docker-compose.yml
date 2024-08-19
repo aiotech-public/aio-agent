@@ -1,7 +1,7 @@
 services:
   aio-agent:
     container_name: aio-agent
-    image: prodaiotech/agentgo:39be28f6
+    image: prodaiotech/agentgo:8d579686
     deploy:
       restart_policy:
         condition: unless-stopped
@@ -13,6 +13,7 @@ services:
       - 80:80
       - 443:443
       - 9200:9200
+      - 6060:6060
     volumes:
       - /opt/go-cache:/go/cache
       - /opt/go-sessions:/go/sessions
