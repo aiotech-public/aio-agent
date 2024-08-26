@@ -75,7 +75,7 @@ services:
     pid: host
     volumes:
       - '/:/host:ro,rslave'
-      - './volumes/letsencrypt:/tls-keys:ro'
+      - './volumes/exporter:/tls-keys:ro'
     command:
       - '--path.rootfs=/host'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
