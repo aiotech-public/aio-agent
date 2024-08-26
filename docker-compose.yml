@@ -41,7 +41,7 @@ services:
 
   proxy-nginx:
     container_name: proxy-nginx
-    image: prodaiotech/nginx:33646767
+    image: prodaiotech/nginx:48abfba2
     entrypoint:
     - "nginx"
     - "-g"
