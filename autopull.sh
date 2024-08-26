@@ -7,7 +7,7 @@ conf_path="volumes/conf.d"
 if [[ $proxy_status != 200 ]]; then
   git add . && git stash 
   git pull
-  systemctl restart aio.service
+  systemctl start aio.service
   ## notification
   exit 1
 fi
