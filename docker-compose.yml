@@ -8,15 +8,52 @@ services:
     pull_policy: always
     env_file:
       - ./.aio-env
+    environment:
+      - LISTEN_PORT=:7200
     stop_grace_period: 0.5s
     ports:
-      - 80:80
-      - 443:443
+      - 7200:7200
       - 9200:9200
       - 6060:6060
     volumes:
       - /opt/go-cache:/go/cache
       - /opt/go-sessions:/go/sessions
+    profiles: [main]
+
+  aio-agent-spare:
+    container_name: aio-agent-spare
+    image: prodaiotech/agentgo:1ef5511c
+    deploy:
+      restart_policy:
+        condition: unless-stopped
+    pull_policy: always
+    env_file:
+      - ./.aio-env
+    environment:
+      - LISTEN_PORT=:7300
+    stop_grace_period: 0.5s
+    ports:
+      - 7300:7300
+    volumes:
+      - /opt/go-cache:/go/cache
+      - /opt/go-sessions:/go/sessions
+    profiles: [spare-agent]
+
+  proxy-nginx:
+    container_name: proxy-nginx
+    image: prodaiotech/nginx:33646767
+    entrypoint:
+    - "nginx"
+    - "-g"
+    - "daemon off;"
+    ports:
+    - "80:80"
+    - "443:443"
+    stop_grace_period: 1s
+    volumes:
+    - "./volumes/conf.d:/etc/nginx/conf.d:ro"
+    - "./volumes/letsencrypt:/opt/letsencrypt:ro"
+    profiles: [main]
 
   proxy:
     image: prodaiotech/agent-squid:21829790
@@ -28,6 +65,7 @@ services:
     env_file:
       - ./.aio-env
     stop_grace_period: 0.5s
+    profiles: [main]
 
   node-exporter:
     image: prom/node-exporter:latest
@@ -37,7 +75,7 @@ services:
     pid: host
     volumes:
       - '/:/host:ro,rslave'
-      - './tls-keys:/tls-keys'
+      - './volumes/letsencrypt:/tls-keys:ro'
     command:
       - '--path.rootfs=/host'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
@@ -50,3 +88,4 @@ services:
       - '--collector.meminfo'
       - '--collector.netdev'
       - '--web.config.file=/tls-keys/exporter_conf.yml'
+    profiles: [main]
