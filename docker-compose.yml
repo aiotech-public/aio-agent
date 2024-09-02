@@ -1,7 +1,7 @@
 services:
   aio-agent:
     container_name: aio-agent
-    image: prodaiotech/agentgo:ae11ce49
+    image: prodaiotech/agentgo:5431603d
     deploy:
       restart_policy:
         condition: unless-stopped
@@ -10,19 +10,20 @@ services:
       - ./.aio-env
     environment:
       - LISTEN_PORT=:7200
+      - METRICS_PORT=:6200
     stop_grace_period: 0.5s
-    ports:
-      - 7200:7200
-      - 9200:9200
-      - 6060:6060
     volumes:
       - /opt/go-cache:/go/cache
       - /opt/go-sessions:/go/sessions
+    ulimits:
+      core:
+        soft: -1
+        hard: -1
     profiles: [main]
 
   aio-agent-spare:
     container_name: aio-agent-spare
-    image: prodaiotech/agentgo:ae11ce49
+    image: prodaiotech/agentgo:5431603d
     deploy:
       restart_policy:
         condition: unless-stopped
@@ -32,8 +33,6 @@ services:
     environment:
       - LISTEN_PORT=:7300
     stop_grace_period: 0.5s
-    ports:
-      - 7300:7300
     volumes:
       - /opt/go-cache:/go/cache
       - /opt/go-sessions:/go/sessions
@@ -49,10 +48,22 @@ services:
     ports:
     - "80:80"
     - "443:443"
+    #agent-go
+    - "9200:9200"
+    #nginx-vts
+    - "9300:9300"
     stop_grace_period: 1s
     volumes:
     - "./volumes/conf.d:/etc/nginx/conf.d:ro"
     - "./volumes/letsencrypt:/opt/letsencrypt:ro"
+    profiles: [main]
+
+  nginx-vts-exporter:
+    container_name: nginx-vts-exporter
+    image: sophos/nginx-vts-exporter:latest
+    stop_grace_period: 1s
+    environment:
+      - NGINX_STATUS=http://proxy-nginx:2000/format/json
     profiles: [main]
 
   proxy:
