@@ -3,8 +3,8 @@ cd $PWD
 # proxy_status=$(curl -iL http://localhost/ping 2>/dev/null | head -n 1 | cut -d$' ' -f2)
 conf_path="volumes/conf.d"
 
-docker stop proxy-nginx
-docker-compose --profile main up -d 
+# docker stop proxy-nginx
+# docker-compose --profile main up -d 
 ## selfhelp
 # if [[ $proxy_status != 200 ]]; then
 #   git add . && git stash 
