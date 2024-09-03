@@ -1,22 +1,70 @@
 services:
   aio-agent:
     container_name: aio-agent
-    image: prodaiotech/agentgo:a9e549c6
+    image: prodaiotech/agentgo:e5830c56
     deploy:
       restart_policy:
         condition: unless-stopped
     pull_policy: always
     env_file:
       - ./.aio-env
+    environment:
+      - LISTEN_PORT=:7200
+      - METRICS_PORT=:6200
     stop_grace_period: 0.5s
-    ports:
-      - 80:80
-      - 443:443
-      - 9200:9200
-      - 6060:6060
     volumes:
       - /opt/go-cache:/go/cache
       - /opt/go-sessions:/go/sessions
+    ulimits:
+      core:
+        soft: -1
+        hard: -1
+    profiles: [main]
+
+  aio-agent-spare:
+    container_name: aio-agent-spare
+    image: prodaiotech/agentgo:e5830c56
+    deploy:
+      restart_policy:
+        condition: unless-stopped
+    pull_policy: always
+    env_file:
+      - ./.aio-env
+    environment:
+      - LISTEN_PORT=:7300
+    stop_grace_period: 0.5s
+    volumes:
+      - /opt/go-cache:/go/cache
+      - /opt/go-sessions:/go/sessions
+    profiles: [spare-agent]
+
+  proxy-nginx:
+    container_name: proxy-nginx
+    image: prodaiotech/nginx:48abfba2
+    entrypoint:
+    - "nginx"
+    - "-g"
+    - "daemon off;"
+    ports:
+    - "80:80"
+    - "443:443"
+    #agent-go
+    - "9200:9200"
+    #nginx-vts
+    - "9300:9300"
+    stop_grace_period: 1s
+    volumes:
+    - "./volumes/conf.d:/etc/nginx/conf.d:ro"
+    - "./volumes/letsencrypt:/opt/letsencrypt:ro"
+    profiles: [main]
+
+  nginx-vts-exporter:
+    container_name: nginx-vts-exporter
+    image: sophos/nginx-vts-exporter:latest
+    stop_grace_period: 1s
+    environment:
+      - NGINX_STATUS=http://proxy-nginx:2000/format/json
+    profiles: [main]
 
   proxy:
     image: prodaiotech/agent-squid:21829790
@@ -28,6 +76,7 @@ services:
     env_file:
       - ./.aio-env
     stop_grace_period: 0.5s
+    profiles: [main]
 
   node-exporter:
     image: prom/node-exporter:latest
@@ -37,7 +86,7 @@ services:
     pid: host
     volumes:
       - '/:/host:ro,rslave'
-      - './tls-keys:/tls-keys'
+      - './volumes/exporter:/tls-keys:ro'
     command:
       - '--path.rootfs=/host'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
@@ -50,3 +99,4 @@ services:
       - '--collector.meminfo'
       - '--collector.netdev'
       - '--web.config.file=/tls-keys/exporter_conf.yml'
+    profiles: [main]
