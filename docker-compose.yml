@@ -8,11 +8,9 @@ services:
     pull_policy: always
     env_file:
       - ./.aio-env
-    ports:
-      - 80:80
-      - 443:443
-      - 9200:9200
-      - 6060:6060
+    environment:
+      - LISTEN_PORT=:7200
+      - METRICS_PORT=:6200
     stop_grace_period: 0.5s
     volumes:
       - /opt/go-cache:/go/cache
@@ -23,33 +21,33 @@ services:
         hard: -1
     profiles: [main]
 
-  # proxy-nginx:
-  #   container_name: proxy-nginx
-  #   image: prodaiotech/nginx:48abfba2
-  #   entrypoint:
-  #   - "nginx"
-  #   - "-g"
-  #   - "daemon off;"
-  #   ports:
-  #   - "80:80"
-  #   - "443:443"
-  #   #agent-go
-  #   - "9200:9200"
-  #   #nginx-vts
-  #   - "9300:9300"
-  #   stop_grace_period: 1s
-  #   volumes:
-  #   - "./volumes/conf.d:/etc/nginx/conf.d:ro"
-  #   - "./volumes/letsencrypt:/opt/letsencrypt:ro"
-  #   profiles: [main]
+  proxy-nginx:
+    container_name: proxy-nginx
+    image: prodaiotech/nginx:48abfba2
+    entrypoint:
+    - "nginx"
+    - "-g"
+    - "daemon off;"
+    ports:
+    - "80:80"
+    - "443:443"
+    #agent-go
+    - "9200:9200"
+    #nginx-vts
+    - "9300:9300"
+    stop_grace_period: 1s
+    volumes:
+    - "./volumes/conf.d:/etc/nginx/conf.d:ro"
+    - "./volumes/letsencrypt:/opt/letsencrypt:ro"
+    profiles: [main]
 
-  # nginx-vts-exporter:
-  #   container_name: nginx-vts-exporter
-  #   image: sophos/nginx-vts-exporter:latest
-  #   stop_grace_period: 1s
-  #   environment:
-  #     - NGINX_STATUS=http://proxy-nginx:2000/format/json
-  #   profiles: [main]
+  nginx-vts-exporter:
+    container_name: nginx-vts-exporter
+    image: sophos/nginx-vts-exporter:latest
+    stop_grace_period: 1s
+    environment:
+      - NGINX_STATUS=http://proxy-nginx:2000/format/json
+    profiles: [main]
 
   proxy:
     image: prodaiotech/agent-squid:21829790
