@@ -1,7 +1,7 @@
 services:
   aio-agent:
     container_name: aio-agent
-    image: prodaiotech/agentgo:37f0267c
+    image: prodaiotech/agentgo:e4bd4d1a
     deploy:
       restart_policy:
         condition: unless-stopped
@@ -20,6 +20,23 @@ services:
         soft: -1
         hard: -1
     profiles: [main]
+
+  aio-agent-spare:
+    container_name: aio-agent-spare
+    image: prodaiotech/agentgo:e4bd4d1a
+    deploy:
+      restart_policy:
+        condition: unless-stopped
+    pull_policy: always
+    env_file:
+      - ./.aio-env
+    environment:
+      - LISTEN_PORT=:7300
+    stop_grace_period: 0.5s
+    volumes:
+      - /opt/go-cache:/go/cache
+      - /opt/go-sessions:/go/sessions
+    profiles: [spare-agent]
 
   proxy-nginx:
     container_name: proxy-nginx
