@@ -12,9 +12,9 @@ services:
       - LISTEN_PORT=:7200
       - METRICS_PORT=:6200
     stop_grace_period: 0.5s
-    volumes:
-      - /opt/go-cache:/go/cache
-      - /opt/go-sessions:/go/sessions
+    # volumes:
+    #   - /opt/go-cache:/go/cache
+    #   - /opt/go-sessions:/go/sessions
     ulimits:
       core:
         soft: -1
@@ -56,6 +56,7 @@ services:
     volumes:
     - "./volumes/conf.d:/etc/nginx/conf.d:ro"
     - "./volumes/letsencrypt:/opt/letsencrypt:ro"
+    - "./volumes/static:/opt/static:ro"
     profiles: [main]
 
   nginx-vts-exporter:
@@ -66,37 +67,37 @@ services:
       - NGINX_STATUS=http://proxy-nginx:2000/format/json
     profiles: [main]
 
-  proxy:
-    image: prodaiotech/agent-squid:21829790
-    restart: unless-stopped
-    ports:
-      - "5145:5145"
-    environment:
-      - TZ=UTC
-    env_file:
-      - ./.aio-env
-    stop_grace_period: 0.5s
-    profiles: [main]
+  # proxy:
+  #   image: prodaiotech/agent-squid:21829790
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5145:5145"
+  #   environment:
+  #     - TZ=UTC
+  #   env_file:
+  #     - ./.aio-env
+  #   stop_grace_period: 0.5s
+  #   profiles: [main]
 
-  node-exporter:
-    image: prom/node-exporter:latest
-    container_name: node-exporter
-    restart: unless-stopped
-    network_mode: host
-    pid: host
-    volumes:
-      - '/:/host:ro,rslave'
-      - './volumes/exporter:/tls-keys:ro'
-    command:
-      - '--path.rootfs=/host'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-      - '--collector.disable-defaults'
-      - '--collector.cpu'
-      - '--collector.cpufreq'
-      - '--collector.diskstats'
-      - '--collector.filesystem'
-      - '--collector.pressure'
-      - '--collector.meminfo'
-      - '--collector.netdev'
-      - '--web.config.file=/tls-keys/exporter_conf.yml'
-    profiles: [main]
+  # node-exporter:
+  #   image: prom/node-exporter:latest
+  #   container_name: node-exporter
+  #   restart: unless-stopped
+  #   network_mode: host
+  #   pid: host
+  #   volumes:
+  #     - '/:/host:ro,rslave'
+  #     - './volumes/exporter:/tls-keys:ro'
+  #   command:
+  #     - '--path.rootfs=/host'
+  #     - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+  #     - '--collector.disable-defaults'
+  #     - '--collector.cpu'
+  #     - '--collector.cpufreq'
+  #     - '--collector.diskstats'
+  #     - '--collector.filesystem'
+  #     - '--collector.pressure'
+  #     - '--collector.meminfo'
+  #     - '--collector.netdev'
+  #     - '--web.config.file=/tls-keys/exporter_conf.yml'
+  #   profiles: [main]

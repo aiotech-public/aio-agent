@@ -26,6 +26,12 @@ if [[ $pull_result != "QWxyZWFkeSB1cCB0byBkYXRlLgo=" ]]; then
   mv $conf_path/upstream $conf_path/upstream.conf && mv $conf_path/upstream-spare.conf $conf_path/upstream-spare && docker exec proxy-nginx nginx -s reload
   sleep 3
   docker-compose --profile spare-agent down
+  
+  rm -rf ./volumes/static
+  docker cp aio-agent:/go/static/. ./volumes/static
+  
   echo "APP RESTARTED `date`" >> /var/log/git.log
   echo "SUCCESS UPDATE $local_commit_hash `date`" >> /var/log/git.log
+
+
 fi
