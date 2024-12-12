@@ -56,6 +56,11 @@ services:
     volumes:
     - "./volumes/conf.d:/etc/nginx/conf.d:ro"
     - "./volumes/letsencrypt:/opt/letsencrypt:ro"
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "3"
+        max-size: "2000m"
     profiles: [main]
 
   nginx-vts-exporter:
