@@ -9,14 +9,14 @@ stream {
 
 ## Stream plain traffic
   server {
-    listen 80 proxy_protocol;
+    listen 80;
     proxy_pass aio-agent;
     proxy_protocol on;
   }
 
 ## Stream TLS traffic
   server {
-    listen 443 proxy_protocol;
+    listen 443;
     proxy_pass aio-agent-tls;
     proxy_protocol on;
   }
