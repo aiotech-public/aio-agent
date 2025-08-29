@@ -1,7 +1,7 @@
 services:
   aio-agent:
     container_name: aio-agent
-    image: prodaiotech/agentgo:3c1c3b6b
+    image: prodaiotech/agentgo:70e7c681
     deploy:
       restart_policy:
         condition: unless-stopped
@@ -9,6 +9,7 @@ services:
     env_file:
       - ./.aio-env
     environment:
+      - LISTEN_TLS_PORT=:7201
       - LISTEN_PORT=:7200
       - METRICS_PORT=:6200
     stop_grace_period: 0.5s
@@ -19,11 +20,16 @@ services:
       core:
         soft: -1
         hard: -1
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "3"
+        max-size: "1000m"
     profiles: [main]
 
   aio-agent-spare:
     container_name: aio-agent-spare
-    image: prodaiotech/agentgo:3c1c3b6b
+    image: prodaiotech/agentgo:70e7c681
     deploy:
       restart_policy:
         condition: unless-stopped
@@ -32,10 +38,16 @@ services:
       - ./.aio-env
     environment:
       - LISTEN_PORT=:7300
+      - LISTEN_TLS_PORT:=7301
     stop_grace_period: 0.5s
     volumes:
       - /opt/go-cache:/go/cache
       - /opt/go-sessions:/go/sessions
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "3"
+        max-size: "1000m"
     profiles: [spare-agent]
 
   proxy-nginx:
@@ -54,8 +66,10 @@ services:
     - "9300:9300"
     stop_grace_period: 1s
     volumes:
-    - "./volumes/conf.d:/etc/nginx/conf.d:ro"
-    - "./volumes/letsencrypt:/opt/letsencrypt:ro"
+    - "./volumes/nginx/conf.d:/etc/nginx/conf.d:ro"
+    - "./volumes/nginx/stream.d:/etc/nginx/stream.d:ro"
+    - "./volumes/nginx/nginx.conf:/etc/nginx/nginx.conf:ro"
+    - "./volumes/nginx/letsencrypt:/opt/letsencrypt:ro"
     logging:
       driver: "json-file"
       options:
