@@ -5,8 +5,7 @@ req_extensions = v3_req
 prompt = no
 
 [ req_distinguished_name ]
-CN = agent-prometheus
-O = AIO Agent Metrics
+CN = client
 
 [ v3_req ]
 basicConstraints = critical, CA:FALSE

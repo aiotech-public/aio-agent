@@ -5,8 +5,7 @@ x509_extensions = v3_ca
 prompt = no
 
 [ req_distinguished_name ]
-CN = aio-agent-metrics-ca
-O = AIO Agent Metrics
+CN = ca
 
 [ v3_ca ]
 basicConstraints = critical, CA:TRUE

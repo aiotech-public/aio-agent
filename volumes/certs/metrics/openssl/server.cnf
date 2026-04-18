@@ -5,8 +5,7 @@ req_extensions = v3_req
 prompt = no
 
 [ req_distinguished_name ]
-CN = aio-agent-metrics
-O = AIO Agent Metrics
+CN = localhost
 
 [ v3_req ]
 basicConstraints = critical, CA:FALSE
@@ -16,7 +15,4 @@ subjectAltName = @alt_names
 
 [ alt_names ]
 DNS.1 = localhost
-DNS.2 = metrics-agent
-DNS.3 = metrics-nginx
-DNS.4 = node-exporter
 IP.1 = 127.0.0.1
