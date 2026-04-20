@@ -60,6 +60,8 @@ services:
     ports:
     - "80:80"
     - "443:443"
+    #node-exporter
+    - "9100:9100"
     #agent-go
     - "9200:9200"
     #nginx-vts
@@ -69,7 +71,10 @@ services:
     - "./volumes/nginx/conf.d:/etc/nginx/conf.d:ro"
     - "./volumes/nginx/stream.d:/etc/nginx/stream.d:ro"
     - "./volumes/nginx/nginx.conf:/etc/nginx/nginx.conf:ro"
-    - "./volumes/nginx/letsencrypt:/opt/letsencrypt:ro"
+    - "./volumes/certs/nginx-origin:/opt/letsencrypt:ro"
+    - "./volumes/certs/metrics/server.crt:/opt/metrics-server.crt:ro"
+    - "./volumes/certs/metrics/server.key:/opt/metrics-server.key:ro"
+    - "./volumes/certs/metrics/ca.crt:/opt/metrics-ca.crt:ro"
     logging:
       driver: "json-file"
       options:
@@ -101,13 +106,14 @@ services:
     image: prom/node-exporter:latest
     container_name: node-exporter
     restart: unless-stopped
-    network_mode: host
-    pid: host
     volumes:
-      - '/:/host:ro,rslave'
-      - './volumes/exporter:/tls-keys:ro'
+      - '/proc:/host/proc:ro'
+      - '/sys:/host/sys:ro'
+      - '/:/host/rootfs:ro,rslave'
     command:
-      - '--path.rootfs=/host'
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/host/rootfs'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
       - '--collector.disable-defaults'
       - '--collector.cpu'
@@ -117,5 +123,4 @@ services:
       - '--collector.pressure'
       - '--collector.meminfo'
       - '--collector.netdev'
-      - '--web.config.file=/tls-keys/exporter_conf.yml'
     profiles: [main]
