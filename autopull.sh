@@ -26,6 +26,10 @@ if [[ $pull_result != "QWxyZWFkeSB1cCB0byBkYXRlLgo=" ]]; then
   mv $conf_path/regular $conf_path/regular.conf && mv $conf_path/spare.conf $conf_path/spare && docker exec proxy-nginx nginx -s reload
   sleep 3
   docker-compose --profile spare-agent down
+  
+  ## old image cleanup
+  docker image prune -af --filter "until=168h" >> /var/log/aio-docker-prune.log 2>&1 || true 
+  
   echo "APP RESTARTED `date`" >> /var/log/git.log
   echo "SUCCESS UPDATE $local_commit_hash `date`" >> /var/log/git.log
 fi
