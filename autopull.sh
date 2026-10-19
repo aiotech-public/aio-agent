@@ -1,10 +1,17 @@
 #!/bin/bash
 cd $PWD
+# one run at a time: cron fires every minute, an update or the IPv6 migration may take longer
+if command -v flock >/dev/null 2>&1; then
+  exec 9>/var/lock/aio-autopull.lock
+  flock -n 9 || exit 0
+fi
+# per-host switches (.env is also read by docker-compose for interpolation)
+if [ -f .env ]; then set -a; . ./.env; set +a; fi
 # Health check: nginx answers on :80 (any HTTP code; 000 = no connection) and the agent container is running.
 # Do not depend on a specific path/status code: the agent serves every path as a regular site request.
 proxy_status=$(curl -s -o /dev/null -m 5 -w '%{http_code}' http://localhost/healthcheck.yml 2>/dev/null)
 agent_running=$(docker inspect -f '{{.State.Running}}' aio-agent 2>/dev/null)
-conf_path="volumes/nginx/stream.d"
+conf_path="${AIO_STREAM_DIR:-volumes/nginx/stream.d}"
 
 ## selfhelp
 if [[ -z "$proxy_status" || "$proxy_status" == "000" || "$agent_running" != "true" ]]; then
@@ -36,3 +43,6 @@ if [[ $pull_result != "QWxyZWFkeSB1cCB0byBkYXRlLgo=" ]]; then
   echo "APP RESTARTED `date`" >> /var/log/git.log
   echo "SUCCESS UPDATE $local_commit_hash `date`" >> /var/log/git.log
 fi
+
+## IPv6 readiness: per-host switches + metrics every run; network migration only while ipv6-migration.flag exists
+[ -x ./ipv6-prepare.sh ] && ./ipv6-prepare.sh run
