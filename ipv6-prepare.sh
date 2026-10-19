@@ -6,6 +6,8 @@
 #   migrate --force - migrate this host now, ignoring the flag and the time slot (manual use)
 # Never fails the caller: always exits 0. Migration runs as soon as the flag is present (no time slots).
 set -u
+# cron jobs may run with a minimal PATH (Debian: /usr/bin:/bin); ip6tables lives in /usr/sbin
+export PATH="$PATH:/usr/local/sbin:/usr/sbin:/sbin"
 cd "$(dirname "$0")" || exit 0
 
 ENV_FILE=.env
