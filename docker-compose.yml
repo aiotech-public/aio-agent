@@ -95,6 +95,9 @@ services:
     restart: unless-stopped
     ports:
       - "5145:5145"
+    # squid prefers IPv6 for dual-stack destinations; keep its egress on IPv4 even on an IPv6-enabled network
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=1
     environment:
       - TZ=UTC
     env_file:
