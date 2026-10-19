@@ -69,7 +69,7 @@ services:
     stop_grace_period: 1s
     volumes:
     - "./volumes/nginx/conf.d:/etc/nginx/conf.d:ro"
-    - "./volumes/nginx/stream.d:/etc/nginx/stream.d:ro"
+    - "./${AIO_STREAM_DIR:-volumes/nginx/stream.d}:/etc/nginx/stream.d:ro"
     - "./volumes/nginx/nginx.conf:/etc/nginx/nginx.conf:ro"
     - "./volumes/certs/nginx-origin:/opt/letsencrypt:ro"
     - "./volumes/certs/metrics/server.crt:/opt/metrics-server.crt:ro"
@@ -95,6 +95,9 @@ services:
     restart: unless-stopped
     ports:
       - "5145:5145"
+    # squid prefers IPv6 for dual-stack destinations; keep its egress on IPv4 even on an IPv6-enabled network
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=1
     environment:
       - TZ=UTC
     env_file:
@@ -123,4 +126,11 @@ services:
       - '--collector.pressure'
       - '--collector.meminfo'
       - '--collector.netdev'
+      - '--collector.textfile'
+      - '--collector.textfile.directory=/host/rootfs/opt/aio-agent/state'
     profiles: [main]
+
+# IPv6 on the compose network is a per-host switch (.env, written by ipv6-prepare.sh); see README-IPV6.md
+networks:
+  default:
+    enable_ipv6: ${AIO_ENABLE_IPV6:-false}

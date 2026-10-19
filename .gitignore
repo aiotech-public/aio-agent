@@ -1,3 +1,4 @@
 .aio-env
 volumes/certs-private
-
+.env
+state/

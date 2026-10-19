@@ -1,25 +1,50 @@
 #!/bin/bash
 cd $PWD
+# One run at a time: cron fires every minute; an update or the IPv6 migration may take longer.
+# A run stuck for more than 20 minutes is killed (process group) so that the health check keeps working.
+LOCK=/var/lock/aio-autopull.lock
+if command -v flock >/dev/null 2>&1 && [ -d /var/lock ] && [ -w /var/lock ]; then
+  exec 9>>"$LOCK"
+  if ! flock -n 9; then
+    holder=$(head -1 "$LOCK" 2>/dev/null)
+    age=$(ps -o etimes= -p "$holder" 2>/dev/null | tr -d ' ')
+    if [[ "$holder" =~ ^[0-9]+$ ]] && [[ "$age" =~ ^[0-9]+$ ]] && [ "$age" -gt 1200 ]; then
+      pgid=$(ps -o pgid= -p "$holder" 2>/dev/null | tr -d ' ')
+      echo "STALE AUTOPULL $holder (${age}s) killed `date`" >> /var/log/git.log
+      [ -n "$pgid" ] && kill -9 -- "-$pgid" 2>/dev/null; sleep 1
+      flock -n 9 || exit 0
+    else
+      exit 0
+    fi
+  fi
+  echo $$ > "$LOCK"
+fi
+# per-host switches (.env is also read by docker-compose for interpolation; only known keys are used here)
+AIO_STREAM_DIR=$(grep -E '^AIO_STREAM_DIR=' .env 2>/dev/null | tail -1 | cut -d= -f2-)
 # Health check: nginx answers on :80 (any HTTP code; 000 = no connection) and the agent container is running.
 # Do not depend on a specific path/status code: the agent serves every path as a regular site request.
 proxy_status=$(curl -s -o /dev/null -m 5 -w '%{http_code}' http://localhost/healthcheck.yml 2>/dev/null)
 agent_running=$(docker inspect -f '{{.State.Running}}' aio-agent 2>/dev/null)
-conf_path="volumes/nginx/stream.d"
+conf_path="${AIO_STREAM_DIR:-volumes/nginx/stream.d}"
 
 ## selfhelp
 if [[ -z "$proxy_status" || "$proxy_status" == "000" || "$agent_running" != "true" ]]; then
   git add . && git stash 
   git pull
+  [ -x ./ipv6-prepare.sh ] && ./ipv6-prepare.sh selfhelp
   systemctl restart aio.service
   ## notification
   exit 1
 fi
 
 ##0-downtime update agent
-pull_result=$(git pull | base64)
+pull_output=$(git pull 2>/dev/null); pull_rc=$?
+pull_result=$(printf '%s\n' "$pull_output" | base64)
 local_commit_hash=$(git rev-parse --short HEAD)
 
-if [[ $pull_result != "QWxyZWFkeSB1cCB0byBkYXRlLgo=" ]]; then
+if [[ $pull_rc -ne 0 ]]; then
+  echo "GIT PULL FAILED `date`" >> /var/log/git.log
+elif [[ $pull_result != "QWxyZWFkeSB1cCB0byBkYXRlLgo=" ]]; then
   echo "NEW COMMIT $local_commit_hash `date`" >> /var/log/git.log
   docker-compose --profile spare-agent up -d
   sleep 3 
@@ -36,3 +61,6 @@ if [[ $pull_result != "QWxyZWFkeSB1cCB0byBkYXRlLgo=" ]]; then
   echo "APP RESTARTED `date`" >> /var/log/git.log
   echo "SUCCESS UPDATE $local_commit_hash `date`" >> /var/log/git.log
 fi
+
+## IPv6 readiness: per-host switches + metrics every run; network migration only while ipv6-migration.flag exists
+[ -x ./ipv6-prepare.sh ] && ./ipv6-prepare.sh run
