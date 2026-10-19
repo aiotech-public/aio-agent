@@ -1,7 +1,7 @@
 #!/bin/bash
 cd $PWD
 # one run at a time: cron fires every minute, an update or the IPv6 migration may take longer
-if command -v flock >/dev/null 2>&1; then
+if command -v flock >/dev/null 2>&1 && [ -d /var/lock ]; then
   exec 9>/var/lock/aio-autopull.lock
   flock -n 9 || exit 0
 fi

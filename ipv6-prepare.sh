@@ -4,7 +4,7 @@
 #   run      - prepare + one-off network migration (only while ipv6-migration.flag exists) + metrics   [autopull.sh]
 #   metrics  - metrics only
 #   migrate --force - migrate this host now, ignoring the flag and the time slot (manual use)
-# Never fails the caller: always exits 0.
+# Never fails the caller: always exits 0. Migration runs as soon as the flag is present (no time slots).
 set -u
 cd "$(dirname "$0")" || exit 0
 
@@ -37,7 +37,8 @@ collect() {
   net_exists=1; [ "$net_v6" = missing ] && net_exists=0
   # published :80 mapped to a container IPv6 by the kernel (no userland proxy)
   dnat_v6=0; ip6tables -t nat -S DOCKER 2>/dev/null | grep -q -- '--dport 80 .*-j DNAT' && dnat_v6=1
-  eligible=0; [ "$kernel_v6" = 1 ] && [ "$docker_major" -ge 27 ] && [ "$ip6t" = 1 ] && eligible=1
+  compose_major=${compose_ver%%.*}; [[ "$compose_major" =~ ^[0-9]+$ ]] || compose_major=0
+  eligible=0; [ "$kernel_v6" = 1 ] && [ "$docker_major" -ge 27 ] && [ "$ip6t" = 1 ] && [ "$compose_major" -ge 2 ] && eligible=1
   sw=$(env_get AIO_ENABLE_IPV6)
   state=pending
   if [ -f "$FAILED_MARK" ]; then state=failed
@@ -55,7 +56,7 @@ write_metrics() {
     echo "# HELP aio_agent_ipv6_state IPv6 migration state of this host (1 for the active state)."
     echo "# TYPE aio_agent_ipv6_state gauge"
     for s in pending ineligible switched migrated failed; do v=0; [ "$s" = "$state" ] && v=1; echo "aio_agent_ipv6_state{state=\"$s\"} $v"; done
-    echo "# HELP aio_agent_ipv6_eligible Host can run an IPv6-enabled compose network (kernel IPv6, Docker >= 27, ip6tables)."
+    echo "# HELP aio_agent_ipv6_eligible Host can run an IPv6-enabled compose network (kernel IPv6, Docker >= 27, ip6tables, compose v2)."
     echo "# TYPE aio_agent_ipv6_eligible gauge"; echo "aio_agent_ipv6_eligible $eligible"
     echo "# HELP aio_agent_ipv6_network Compose network has IPv6 enabled."
     echo "# TYPE aio_agent_ipv6_network gauge"; v=0; [ "$net_v6" = true ] && v=1; echo "aio_agent_ipv6_network $v"
@@ -96,11 +97,6 @@ migrate() {
   collect
   [ "$force" = --force ] || [ -f "$FLAG" ] || return 0
   [ "$state" = pending ] || return 0
-  if [ "$force" != --force ]; then
-    # one chance per day per host, spread over 24h by hostname
-    local slot now; slot=$(( $(hostname | cksum | cut -d' ' -f1) % 1440 )); now=$(( 10#$(date -u +%H) * 60 + 10#$(date -u +%M) ))
-    [ "$slot" = "$now" ] || return 0
-  fi
   log "migration start (docker=$docker_ver compose=$compose_ver host_global=$host_global)"
   env_set AIO_ENABLE_IPV6 true
   docker-compose --profile '*' down >> "$LOG" 2>&1
@@ -111,7 +107,7 @@ migrate() {
     log "migration FAILED, rolling back to IPv4"
     env_set AIO_ENABLE_IPV6 false
     docker-compose --profile '*' down >> "$LOG" 2>&1
-    docker-compose --profile main up -d --pull never >> "$LOG" 2>&1
+    docker-compose --profile main up -d --pull never >> "$LOG" 2>&1 || docker-compose --profile main up -d >> "$LOG" 2>&1
     date -u +%FT%TZ > "$FAILED_MARK"
     echo "IPV6 MIGRATION FAILED $(date)" >> /var/log/git.log
   fi

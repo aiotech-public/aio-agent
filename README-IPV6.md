@@ -12,8 +12,8 @@ keeps talking to the backend over IPv4. Nothing changes for hosts without a publ
     on a kernel without IPv6 switches nginx to the IPv4-only listeners.
   - `run` (from `autopull.sh` every minute): `prepare` + metrics + the one-off migration below.
 - Migration of an already running host = recreate the compose network with IPv6 (`down`, `up -d --pull never`,
-  a few seconds of downtime). It only happens while the file `ipv6-migration.flag` exists in the repo, once per host
-  in its own minute of the day (spread by hostname), and only on eligible hosts: kernel IPv6, Docker >= 27, ip6tables.
+  a few seconds of downtime). It only happens while the file `ipv6-migration.flag` exists in the repo (remove the file to stop
+  pending migrations), and only on eligible hosts: kernel IPv6, Docker >= 27, ip6tables, compose v2.
   If the health check fails afterwards the host rolls back to IPv4 and writes `state/ipv6-migration.failed`
   (never retried automatically).
 
