@@ -8,14 +8,17 @@ keeps talking to the backend over IPv4. Nothing changes for hosts without a publ
   `${AIO_STREAM_DIR:-volumes/nginx/stream.d}` (listeners on `[::]`) and `volumes/nginx/stream-v4.d` is the IPv4-only
   fallback. Both values live in the per-host `.env` (not in git).
 - `ipv6-prepare.sh` writes `.env` and `state/ipv6.prom` (node-exporter textfile metrics):
-  - `prepare` (from `aio.service` on every start): on a first install picks IPv6 on/off before the first `up`;
-    on a kernel without IPv6 switches nginx to the IPv4-only listeners.
+  - `prepare`: on a first install (new hosts get it as `ExecStartPre` in `aio.service`) picks IPv6 on/off before the
+    first `up`, after a dry-run `docker network create --ipv6`; on a kernel without IPv6 switches nginx to the IPv4-only
+    listeners. Existing hosts run it from `autopull.sh`.
   - `run` (from `autopull.sh` every minute): `prepare` + metrics + the one-off migration below.
+  - `selfhelp` (from `autopull.sh` when the stack is down, before `systemctl restart aio.service`): `prepare`, and if the
+    restart loop repeats with IPv6 on, switches the host back to IPv4 and marks it failed.
 - Migration of an already running host = recreate the compose network with IPv6 (`down`, `up -d --pull never`,
   a few seconds of downtime). It only happens while the file `ipv6-migration.flag` exists in the repo (remove the file to stop
   pending migrations), and only on eligible hosts: kernel IPv6, Docker >= 27, ip6tables, compose v2.
-  If the health check fails afterwards the host rolls back to IPv4 and writes `state/ipv6-migration.failed`
-  (never retried automatically).
+  The health check waits up to 60 s for the agent to answer; if it fails the host rolls back to IPv4 and writes
+  `state/ipv6-migration.failed` with the reason (never retried automatically).
 
 ## Metrics (node-exporter, `aio_agent_ipv6_*`)
 `state{pending|ineligible|switched|migrated|failed}`, `eligible`, `network`, `host_global{addr}`, `dnat`, `ready`
