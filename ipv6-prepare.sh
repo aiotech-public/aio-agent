@@ -31,6 +31,7 @@ collect() {
   docker_ver=$(docker version --format '{{.Server.Version}}' 2>/dev/null || echo 0)
   docker_major=${docker_ver%%.*}; [[ "$docker_major" =~ ^[0-9]+$ ]] || docker_major=0
   compose_ver=$(docker-compose version --short 2>/dev/null || echo unknown)
+  os_id=$(. /etc/os-release 2>/dev/null && echo "${ID:-unknown} ${VERSION_ID:-}" | sed 's/ *$//')
   ip6t=0; ip6tables -S >/dev/null 2>&1 && ip6t=1
   host_v6_addr=$(ip -6 addr show scope global 2>/dev/null | awk '/inet6/ && !/temporary|deprecated/ {print $2; exit}' | cut -d/ -f1)
   host_v6_route=0; [ -n "$(ip -6 route show default 2>/dev/null)" ] && host_v6_route=1
@@ -69,7 +70,7 @@ write_metrics() {
     echo "# HELP aio_agent_ipv6_ready Host can serve IPv6 traffic natively (network IPv6 + global address)."
     echo "# TYPE aio_agent_ipv6_ready gauge"; echo "aio_agent_ipv6_ready $ready"
     echo "# HELP aio_agent_host_info Docker / compose versions and IPv6 facts of the host."
-    echo "# TYPE aio_agent_host_info gauge"; echo "aio_agent_host_info{docker=\"$docker_ver\",compose=\"$compose_ver\",kernel_ipv6=\"$kernel_v6\",ip6tables=\"$ip6t\"} 1"
+    echo "# TYPE aio_agent_host_info gauge"; echo "aio_agent_host_info{docker=\"$docker_ver\",compose=\"$compose_ver\",kernel_ipv6=\"$kernel_v6\",ip6tables=\"$ip6t\",os=\"${os_id:-unknown}\"} 1"
     echo "# TYPE aio_agent_ipv6_last_run_timestamp_seconds gauge"; echo "aio_agent_ipv6_last_run_timestamp_seconds $(date +%s)"
   } > "$tmp" && mv -f "$tmp" "$PROM"
 }
