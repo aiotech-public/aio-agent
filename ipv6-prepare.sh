@@ -5,6 +5,7 @@
 #   selfhelp - called by autopull.sh before it restarts a stack that is down: prepare + break an IPv6-related restart loop
 #   metrics  - metrics only
 #   migrate --force - migrate this host now, ignoring the flag (manual use)
+# While ipv6-migration.retry exists, 'run' gives a host that failed on a selfhelp restart loop one more attempt.
 # Never fails the caller: always exits 0.
 set -u
 # cron jobs may run with a minimal PATH (Debian: /usr/bin:/bin); ip6tables lives in /usr/sbin
@@ -17,6 +18,8 @@ PROM="$STATE_DIR/ipv6.prom"
 FAILED_MARK="$STATE_DIR/ipv6-migration.failed"
 SELFHELP_COUNT="$STATE_DIR/selfhelp.count"
 FLAG=ipv6-migration.flag
+RETRY_FLAG=ipv6-migration.retry                  # repo-level, like FLAG: one more attempt for "restart loop" failures
+RETRY_DONE="$STATE_DIR/ipv6-retry.done"          # per host: the attempt was made (never loop)
 LOG=/var/log/aio-ipv6.log
 V4_DIR=volumes/nginx/stream-v4.d
 NET="$(basename "$PWD" | tr 'A-Z' 'a-z')_default"   # compose project network (project = directory name)
@@ -87,6 +90,8 @@ healthcheck() {
   # the agent needs a few seconds to start listening (geo databases etc.): wait up to 60 s
   local i st
   for i in $(seq 1 12); do
+    # nginx has no restart policy and can lose the race resolving its upstream on a fresh network: start it again
+    [ "$(docker inspect -f '{{.State.Running}}' proxy-nginx 2>/dev/null)" = true ] || docker start proxy-nginx >> "$LOG" 2>&1
     st=$(curl -s -o /dev/null -m 5 -w '%{http_code}' http://localhost/healthcheck.yml 2>/dev/null)
     [ -n "$st" ] && [ "$st" != 000 ] && [ "$(docker inspect -f '{{.State.Running}}' aio-agent 2>/dev/null)" = true ] && return 0
     sleep 5
@@ -156,9 +161,18 @@ selfhelp() {
   fi
 }
 
+retry_failed() {
+  # one-shot: a host switched back to IPv4 by the selfhelp breaker (two restarts in a row, see autopull.sh START_GRACE)
+  # gets a second attempt while the retry flag is in the repo; any other failure reason stays as it is
+  [ -f "$RETRY_FLAG" ] && [ -f "$FAILED_MARK" ] && [ ! -f "$RETRY_DONE" ] || return 0
+  grep -q 'restart loop' "$FAILED_MARK" || return 0
+  date -u +%FT%TZ > "$RETRY_DONE"
+  rm -f "$FAILED_MARK"; log "retry: failed mark (restart loop) cleared, migrating again"
+}
+
 case "${1:-prepare}" in
   prepare)  prepare ;;
-  run)      prepare; rm -f "$SELFHELP_COUNT"; migrate ;;
+  run)      prepare; rm -f "$SELFHELP_COUNT"; retry_failed; migrate ;;
   selfhelp) selfhelp ;;
   migrate)  migrate "${2:-}" ;;
   metrics)  ;;

@@ -1,0 +1,2 @@
+While this file exists, ipv6-prepare.sh run retries the IPv6 migration once on hosts that fell back to IPv4
+because of a selfhelp restart loop (state/ipv6-migration.failed with "restart loop"). Remove after the retry wave.
