@@ -52,6 +52,20 @@ if [[ -z "$proxy_status" || "$proxy_status" == "000" || "$agent_running" != "tru
   exit 1
 fi
 
+## Image cleanup: keep the agent image in use plus the three newest other tags; older tags are removed oldest first, one
+## per run so that the disk I/O stays small. Images referenced by any container (running or stopped, incl. the spare during
+## an update) are never touched. The 7-day prune below does not keep up with several releases a day on small disks.
+if docker inspect aio-agent >/dev/null 2>&1; then
+  used=$(docker ps -a --format '{{.Image}}')
+  victim=$(docker images prodaiotech/agentgo --format '{{.CreatedAt}}\t{{.Repository}}:{{.Tag}}' | grep -v ':<none>$' \
+           | sort -r | cut -f2 | grep -vxF -f <(printf '%s\n' "$used") | tail -n +4 | tail -1)
+  if [ -n "$victim" ]; then
+    echo "IMAGE CLEANUP $victim `date`" >> /var/log/git.log
+    docker rmi "$victim" >> /var/log/aio-docker-prune.log 2>&1
+    docker image prune -f >> /var/log/aio-docker-prune.log 2>&1
+  fi
+fi
+
 ##0-downtime update agent
 pull_output=$(git pull 2>/dev/null); pull_rc=$?
 pull_result=$(printf '%s\n' "$pull_output" | base64)
