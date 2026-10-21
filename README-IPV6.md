@@ -17,8 +17,14 @@ keeps talking to the backend over IPv4. Nothing changes for hosts without a publ
 - Migration of an already running host = recreate the compose network with IPv6 (`down`, `up -d --pull never`,
   a few seconds of downtime). It only happens while the file `ipv6-migration.flag` exists in the repo (remove the file to stop
   pending migrations), and only on eligible hosts: kernel IPv6, Docker >= 27, ip6tables, compose v2.
-  The health check waits up to 60 s for the agent to answer; if it fails the host rolls back to IPv4 and writes
-  `state/ipv6-migration.failed` with the reason (never retried automatically).
+  The health check waits up to 60 s for the agent to answer (and starts `proxy-nginx` again if it lost the upstream
+  race on the fresh network); if it fails the host rolls back to IPv4 and writes `state/ipv6-migration.failed` with
+  the reason.
+- Start grace (`autopull.sh`, `START_GRACE=90`): a failed health check within 90 s of the agent container start is
+  not treated as an outage - the run is skipped (`STACK STARTING` in `/var/log/git.log`). Without it the cron minute
+  after any restart produced a second selfhelp, which the breaker counted as a restart loop.
+- Retry: while `ipv6-migration.retry` exists in the repo, `run` clears a `restart loop` failure once per host
+  (`state/ipv6-retry.done`) and migrates again. Other failure reasons are never retried automatically.
 
 ## Metrics (node-exporter, `aio_agent_ipv6_*`)
 `state{pending|ineligible|switched|migrated|failed}`, `eligible`, `network`, `host_global{addr}`, `dnat`, `ready`
