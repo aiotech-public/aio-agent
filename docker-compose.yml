@@ -78,8 +78,8 @@ services:
     logging:
       driver: "json-file"
       options:
-        max-file: "3"
-        max-size: "2000m"
+        max-file: "5"
+        max-size: "200m"
     profiles: [main]
 
   nginx-vts-exporter:
